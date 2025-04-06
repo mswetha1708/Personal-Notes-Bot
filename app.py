@@ -1,12 +1,9 @@
-import os
 import streamlit as st
-from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-from langchain.vectorstores import Chroma
+from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from sklearn.decomposition import PCA
-from chromadb.config import Settings as ChromaSettings
 import matplotlib.pyplot as plt
 
 # Load environment variables
@@ -30,16 +27,10 @@ if uploaded_file:
     embeddings = GoogleGenerativeAIEmbeddings(
         model="models/embedding-001", google_api_key=api_key
     )
-    chroma_settings = ChromaSettings(
-        chroma_db_impl="duckdb+parquet",
-        persist_directory="/tmp/chroma" 
-    )
 
-    db = Chroma.from_documents(
-        documents,
-        embedding=embeddings,
-        client_settings=chroma_settings
-    )
+    db = FAISS.from_documents(documents, embeddings)
+    retriever = db.as_retriever()
+
     retriever = db.as_retriever()
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
