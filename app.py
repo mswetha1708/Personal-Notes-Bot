@@ -29,7 +29,7 @@ if uploaded_file:
     embeddings = GoogleGenerativeAIEmbeddings(
         model="models/embedding-001", google_api_key=api_key
     )
-    db = Chroma.from_documents(documents, embeddings)
+    db = Chroma.from_documents(documents, embeddings, persist_directory=None)
     retriever = db.as_retriever()
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
