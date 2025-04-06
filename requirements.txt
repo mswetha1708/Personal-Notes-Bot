@@ -1,0 +1,7 @@
+langchain==0.1.14
+langchain-google-genai==0.0.8
+chromadb
+python-dotenv
+scikit-learn
+matplotlib
+streamlit
