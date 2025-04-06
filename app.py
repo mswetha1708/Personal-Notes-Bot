@@ -32,6 +32,7 @@ if uploaded_file:
     )
     chroma_settings = ChromaSettings(
         chroma_db_impl="duckdb+parquet",
+        persist_directory="/tmp/chroma" 
     )
 
     db = Chroma.from_documents(
