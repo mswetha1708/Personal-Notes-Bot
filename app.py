@@ -6,13 +6,33 @@ from langchain.chains import RetrievalQA
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
-# Load environment variables
-import streamlit as st
+# Load API key from Streamlit secrets
 api_key = st.secrets["GOOGLE_API_KEY"]
 
-st.title("📚 Ask Your Notes + Visualize Embeddings (Gemini)")
+st.title("📚 Ask Your Notes + Visualize Embeddings (Gemini + FAISS)")
 
 uploaded_file = st.file_uploader("Upload a text file", type=["txt"])
+
+def visualize_faiss_embeddings(faiss_store, num_points=10):
+    docs = list(faiss_store.docstore._dict.values())
+    if len(docs) < 2:
+        st.warning("Need at least 2 chunks to visualize embeddings.")
+        return
+
+    vectors = [faiss_store.index.reconstruct(i) for i in range(min(len(docs), num_points))]
+    texts = [doc.page_content for doc in docs[:num_points]]
+
+    pca = PCA(n_components=2)
+    reduced = pca.fit_transform(vectors)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.scatter(reduced[:, 0], reduced[:, 1], color='skyblue')
+    for i, txt in enumerate(texts):
+        snippet = txt[:30].replace("\n", " ") + "..."
+        ax.annotate(snippet, (reduced[i, 0], reduced[i, 1]), fontsize=8)
+    ax.set_title("📉 FAISS Embedding Visualization (PCA)")
+    ax.grid(True)
+    st.pyplot(fig)
 
 if uploaded_file:
     notes = uploaded_file.read().decode("utf-8")
@@ -23,7 +43,7 @@ if uploaded_file:
     documents = splitter.create_documents([notes])
     st.success(f"✅ Text split into {len(documents)} chunks.")
 
-    # Embed using Gemini
+    # Embedding
     embeddings = GoogleGenerativeAIEmbeddings(
         model="models/embedding-001", google_api_key=api_key
     )
@@ -31,7 +51,7 @@ if uploaded_file:
     db = FAISS.from_documents(documents, embeddings)
     retriever = db.as_retriever()
 
-    retriever = db.as_retriever()
+    # LLM
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
         google_api_key=api_key,
@@ -41,24 +61,12 @@ if uploaded_file:
 
     # Visualization
     st.subheader("📉 Embedding Visualization (2D PCA)")
-
     try:
-        collection = db._collection
-        raw = collection.get(include=["embeddings", "documents"])
-        if len(raw["embeddings"]) < 2:
-            st.warning("Need at least 2 chunks to visualize embeddings.")
-        else:
-            pca = PCA(n_components=2)
-            reduced = pca.fit_transform(raw["embeddings"])
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.scatter(reduced[:, 0], reduced[:, 1])
-            for i, txt in enumerate(raw["documents"][:20]):
-                ax.annotate(txt[:30].replace("\n", " ") + "...", (reduced[i, 0], reduced[i, 1]), fontsize=8)
-            st.pyplot(fig)
+        visualize_faiss_embeddings(db, num_points=20)
     except Exception as e:
         st.error(f"Embedding visualization failed: {e}")
 
-    # Ask question
+    # Q&A Interface
     st.subheader("💬 Ask a question based on your notes")
     query = st.text_input("Your question:")
     if query:
