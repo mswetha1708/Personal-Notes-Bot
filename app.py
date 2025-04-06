@@ -6,6 +6,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from sklearn.decomposition import PCA
+from chromadb.config import Settings as ChromaSettings
 import matplotlib.pyplot as plt
 
 # Load environment variables
